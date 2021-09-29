@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import twitter from 'twitter-lite';
-import { useTheData } from './actions.js';
+import { uploadFile, useTheData } from './actions.js';
+import dateFormat from 'dateformat';
 
 const client = new twitter({
   consumer_key: process.env.TWITTER_CONSUMER_KEY,  
@@ -18,29 +19,43 @@ const uploadClient = new twitter({
 });
 
 async function screenshotAndTweet(){
-  const folder = 'shakemaps';
-  const color = 'e60000';
-  let message = '';
-
   let metadata = [];
-
   const metadataFileUrl = `https://caseymm-earthquakes.s3.amazonaws.com/shakemaps/metadata.json`;
   const metadataRespLatest = await fetch(metadataFileUrl);
   const metadataLatest = await metadataRespLatest.json();
+  
+  // console.log(metadataLatest)
+  for(const q in metadataLatest){
+    const quake = metadataLatest[q];
+    if(quake.hasMap){
+      // add it back to the array
+      metadata.push(quake);
+    } else if(quake.geojsonUrl){
+      useTheData(quake.id).then(img => {
+          uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
+            const dateStr = dateFormat(quake.date, "mm-d-yyyy-hhMMss");
+            const status = {
+              status: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} at ${dateStr}`,
+              media_ids: result.media_id_string
+            }
+            client.post('statuses/update', status).then(result => {
+              quake.hasMap = true;
+              metadata.push(quake);
+              console.log('You successfully tweeted this : "' + result.text + '"');
+            }).catch(console.error);
+          }).catch(console.error);
+        });
+    } else {
+      metadata.push(quake);
+    }
+    if(q == metadataLatest.length - 1){
+      console.log('uploading metadata')
+      console.log(metadata)
+      await uploadFile(`shakemaps/metadata`, JSON.stringify(metadata), 'json');
+    }
+  }
 
-  // useTheData(folder, color).then(img => {
-  //   uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
-  //     if(messageArray.length === 0){
-  //       const status = {
-  //         status: message,
-  //         media_ids: result.media_id_string
-  //       }
-  //       client.post('statuses/update', status).then(result => {
-  //         console.log('You successfully tweeted this : "' + result.text + '"');
-  //       }).catch(console.error);
-  //     }
-  //   }).catch(console.error);
-  // });
+  
 }
 
 screenshotAndTweet();

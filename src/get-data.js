@@ -9,8 +9,8 @@ async function getLatestEarthquakes(){
   const metadataRespLatest = await fetch(metadataFileUrl);
   const metadataLatest = await metadataRespLatest.json();
 
-  // const earthquakes = `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_hour.geojson`;
-  const earthquakes = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson';
+  const earthquakes = `https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_hour.geojson`;
+  // const earthquakes = 'https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson';
   const resp = await fetch(earthquakes);
   const data = await resp.json();
 
@@ -30,11 +30,14 @@ async function getLatestEarthquakes(){
       const detailData = await response.json();
       const magnitude = detailData.properties.mag;
       const location = detailData.properties.place;
+      console.log(quake.properties, detailData);
       let tmp = {
         id: id,
         detailUrl: detailUrl,
         magnitude: magnitude,
-        location: location
+        location: location,
+        date: new Date(detailData.properties.time),
+        hasMap: false
       }
       try{
         const shapeUrl = detailData.properties.products.shakemap[0]['contents']['download/shape.zip']['url'];
@@ -51,6 +54,7 @@ async function getLatestEarthquakes(){
     }
     if(q == data.features.length - 1){
       console.log('uploading metadata')
+      console.log(metadata)
       await uploadFile(`shakemaps/metadata`, JSON.stringify(metadata), 'json');
     }
   }
