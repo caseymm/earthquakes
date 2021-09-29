@@ -19,7 +19,7 @@ async function getLatestEarthquakes(){
     const detailUrl = quake.properties.detail;
     const id = detailUrl.replace('.geojson', '').split('/').slice(-1)[0];
 
-    if(metadataLatest.find(obj => obj.geojsonUrl)){
+    if(metadataLatest.find(obj => obj.id === id && obj.geojsonUrl)){
       // if we already have the geojson, push it back in so that we keep knowing we have it
       console.log('already uploaded');
       metadata.push(metadataLatest.find(obj => obj.geojsonUrl));

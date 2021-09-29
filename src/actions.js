@@ -40,14 +40,14 @@ async function uploadFile(name, data, ext) {
 };
 
 async function convertShapefile(url, magnitude) {
-  let options = {tolerance: 0.01, highQuality: false};
-  if(magnitude < 3){
-    options.tolerance = 0.05;
-  }
+  let options = {tolerance: 0.005, highQuality: false};
+  // if(magnitude < 3){
+  //   options.tolerance = 0.005;
+  // }
   const geojson = await shp(url);
   const mi = geojson.find(obj => obj.fileName === 'mi');
   const simplified = simplify(mi, options);
-  const smaller = gp(simplified, 3);
+  const smaller = gp(simplified, 4);
   return smaller;
 }
 
@@ -77,4 +77,4 @@ async function convertShapefile(url, magnitude) {
 //   return screenshot;
 // }
 
-export { uploadFile, convertShapefile, useTheData }
+export { uploadFile, convertShapefile }
