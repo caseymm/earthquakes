@@ -36,9 +36,10 @@ async function screenshotAndTweet(){
       metadata.push(quake);
       useTheData(quake.id).then(img => {
           uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
-            const dateStr = dateFormat(quake.date, "mmmm dS, yyyy, h:MM:ss TT");
+            const dateStr = dateFormat(quake.date, "mmmm dS, yyyy");
+            const timeStr = dateFormat(quake.date, "h:MM:ss TT");
             const status = {
-              status: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} at ${dateStr} GMT\n\nhttps://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`,
+              status: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} on ${dateStr} at ${timeStr} GMT\n\nhttps://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`,
               media_ids: result.media_id_string
             }
             client.post('statuses/update', status).then(result => {
