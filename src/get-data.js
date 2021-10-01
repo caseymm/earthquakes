@@ -22,7 +22,7 @@ async function getLatestEarthquakes(){
     if(metadataLatest.find(obj => obj.id === id && obj.geojsonUrl)){
       // if we already have the geojson, push it back in so that we keep knowing we have it
       console.log('already uploaded');
-      metadata.push(metadataLatest.find(obj => obj.geojsonUrl));
+      metadata.push(metadataLatest.find(obj => obj.id === id && obj.geojsonUrl));
     } else {
       // if we haven't already gotten the geojson for this quake
       // console.log(id)
@@ -30,7 +30,6 @@ async function getLatestEarthquakes(){
       const detailData = await response.json();
       const magnitude = detailData.properties.mag;
       const location = detailData.properties.place;
-      console.log(quake.properties, detailData);
       let tmp = {
         id: id,
         detailUrl: detailUrl,
@@ -42,7 +41,6 @@ async function getLatestEarthquakes(){
       try{
         const shapeUrl = detailData.properties.products.shakemap[0]['contents']['download/shape.zip']['url'];
         const geojson = await convertShapefile(shapeUrl, magnitude);
-        console.log(geojson)
         const uploaded = await uploadFile(`shakemaps/${id}`, JSON.stringify(geojson), 'geojson');
         tmp.geojsonUrl = `https://caseymm-earthquakes.s3-us-west-1.amazonaws.com/shakemaps/${id}.geojson`;
         console.log('has shape');

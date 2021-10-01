@@ -31,6 +31,9 @@ async function screenshotAndTweet(){
       // add it back to the array
       metadata.push(quake);
     } else if(quake.geojsonUrl){
+      // technically haven't created the map, but if it fails it is too late anyway
+      quake.hasMap = true;
+      metadata.push(quake);
       useTheData(quake.id).then(img => {
           uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
             const dateStr = dateFormat(quake.date, "mmmm dS, yyyy, h:MM:ss TT");
@@ -39,8 +42,6 @@ async function screenshotAndTweet(){
               media_ids: result.media_id_string
             }
             client.post('statuses/update', status).then(result => {
-              quake.hasMap = true;
-              metadata.push(quake);
               console.log('You successfully tweeted this : "' + result.text + '"');
             }).catch(console.error);
           }).catch(console.error);
@@ -48,6 +49,7 @@ async function screenshotAndTweet(){
     } else {
       metadata.push(quake);
     }
+    console.log(q, metadataLatest.length - 1)
     if(q == metadataLatest.length - 1){
       console.log('uploading metadata')
       console.log(metadata)
