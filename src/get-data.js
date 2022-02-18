@@ -4,7 +4,6 @@ import { convertShapefile, uploadFile } from './actions.js';
 async function getLatestEarthquakes(){
 
   let metadata = [];
-
   const metadataFileUrl = `https://caseymm-earthquakes.s3.amazonaws.com/shakemaps/metadata.json`;
   const metadataRespLatest = await fetch(metadataFileUrl);
   const metadataLatest = await metadataRespLatest.json();
