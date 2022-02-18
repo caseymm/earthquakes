@@ -23,7 +23,7 @@ async function screenshotAndTweet(){
   const metadataFileUrl = `https://caseymm-earthquakes.s3.amazonaws.com/shakemaps/metadata.json`;
   const metadataRespLatest = await fetch(metadataFileUrl);
   const metadataLatest = await metadataRespLatest.json();
-  
+ 
   // console.log(metadataLatest)
   for(const q in metadataLatest){
     const quake = metadataLatest[q];
@@ -35,6 +35,8 @@ async function screenshotAndTweet(){
       quake.hasMap = true;
       metadata.push(quake);
       useTheData(quake.id).then(img => {
+        if(img){
+          // don't bother making the map if it's going to be a blank map of water
           uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
             const dateStr = dateFormat(quake.date, "mmmm dS, yyyy");
             const timeStr = dateFormat(quake.date, "h:MM:ss TT");
@@ -42,11 +44,13 @@ async function screenshotAndTweet(){
               status: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} on ${dateStr} at ${timeStr} GMT\n\nhttps://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`,
               media_ids: result.media_id_string
             }
+            // post the status with the uploaded media to twitter
             client.post('statuses/update', status).then(result => {
               console.log('You successfully tweeted this : "' + result.text + '"');
             }).catch(console.error);
           }).catch(console.error);
-        });
+        } 
+      });
     } else {
       metadata.push(quake);
     }

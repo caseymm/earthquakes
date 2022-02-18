@@ -53,22 +53,35 @@ async function useTheData(id){
   const context = await browser.newContext({
     deviceScaleFactor: 2
   });
+  let isBlank = false;
   const page = await context.newPage();
   await page.setViewportSize({ width: 800, height: 800 });
   await page.goto(`https://caseymm.github.io/mbx-earthquakes/?url=https://caseymm-earthquakes.s3.us-west-1.amazonaws.com/shakemaps/${id}.geojson`);
   try{
-    await page.waitForSelector('#hidden', {state: 'attached'});
+    const sel = await page.waitForSelector('#hidden', {state: 'attached'});
+    if(await sel.textContent() === 'blank map'){
+      isBlank = true;
+    }
   } catch(err){
     // try again
     await delay(5000) // waiting 5 seconds
     console.log(`https://caseymm.github.io/mbx-earthquakes/?url=https://caseymm-earthquakes.s3.us-west-1.amazonaws.com/shakemaps/${id}.geojson`)
     await page.goto(`https://caseymm.github.io/mbx-earthquakes/?url=https://caseymm-earthquakes.s3.us-west-1.amazonaws.com/shakemaps/${id}.geojson`);
-    await page.waitForSelector('#hidden', {state: 'attached'});
+    const sel = await page.waitForSelector('#hidden', {state: 'attached'});
+    if(await sel.textContent() === 'blank map'){
+      isBlank = true;
+    }
   }
-  const screenshot = await page.screenshot();
-  await uploadFile(`shakemaps/${id}`, screenshot, 'png');
-  await browser.close();
-  return screenshot;
+  if(isBlank){
+    await browser.close();
+    return null;
+  } else {
+    // only take the screenshot if it's not blank water
+    const screenshot = await page.screenshot();
+    await uploadFile(`shakemaps/${id}`, screenshot, 'png');
+    await browser.close();
+    return screenshot;
+  }
 }
 
 export { uploadFile, convertShapefile, useTheData }
