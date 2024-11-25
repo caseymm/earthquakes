@@ -1,32 +1,46 @@
 import fetch from 'node-fetch';
-import twitter from 'twitter-lite';
+import { BskyAgent } from '@atproto/api';
 import { uploadFile, useTheData } from './actions.js';
 import dateFormat from 'dateformat';
 
-const client = new twitter({
-  consumer_key: process.env.TWITTER_CONSUMER_KEY,  
-  consumer_secret: process.env.TWITTER_CONSUMER_SECRET,  
-  access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,  
-  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET
-});
+const agent = new BskyAgent({
+  service: 'https://bsky.social',
+})
 
-const uploadClient = new twitter({
-  consumer_key: process.env.TWITTER_CONSUMER_KEY,  
-  consumer_secret: process.env.TWITTER_CONSUMER_SECRET,  
-  access_token_key: process.env.TWITTER_ACCESS_TOKEN_KEY,  
-  access_token_secret: process.env.TWITTER_ACCESS_TOKEN_SECRET,
-  subdomain: "upload"
-});
+async function uploadImageToBsky(fileBuffer) {
+  try {
+      const { data } = await agent.uploadBlob(fileBuffer, { encoding:'image/jpeg'} )
+      return data.blob;
+  } catch (error) {
+      console.error("Error uploading image:", error);
+      throw error;
+  }
+}
+
+async function login() {
+  try {
+      await agent.login({ 
+          identifier: process.env.BLUESKY_USERNAME, 
+          password: process.env.BLUESKY_PASSWORD 
+      });
+      console.log("Logged in successfully!");
+  } catch (error) {
+      console.error("Error logging in:", error);
+      throw error;
+  }
+}
 
 async function screenshotAndTweet(){
   let metadata = [];
   const metadataFileUrl = `https://caseymm-earthquakes.s3.amazonaws.com/shakemaps/metadata.json`;
   const metadataRespLatest = await fetch(metadataFileUrl);
   const metadataLatest = await metadataRespLatest.json();
- 
+
   // console.log(metadataLatest)
   for(const q in metadataLatest){
     const quake = metadataLatest[q];
+    const dateStr = dateFormat(quake.date, "mmmm dS, yyyy");
+    const timeStr = dateFormat(quake.date, "h:MM:ss TT");
     if(quake.hasMap){
       // add it back to the array
       metadata.push(quake);
@@ -36,19 +50,20 @@ async function screenshotAndTweet(){
       metadata.push(quake);
       useTheData(quake.id).then(img => {
         if(img){
-          // don't bother making the map if it's going to be a blank map of water
-          uploadClient.post('media/upload', { media_data: img.toString('base64') }).then(result => {
-            const dateStr = dateFormat(quake.date, "mmmm dS, yyyy");
-            const timeStr = dateFormat(quake.date, "h:MM:ss TT");
-            const status = {
-              status: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} on ${dateStr} at ${timeStr} GMT\n\nhttps://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`,
-              media_ids: result.media_id_string
-            }
-            // post the status with the uploaded media to twitter
-            client.post('statuses/update', status).then(result => {
-              console.log('You successfully tweeted this : "' + result.text + '"');
-            }).catch(console.error);
-          }).catch(console.error);
+
+          uploadImageToBsky(img).then(result => {
+            agent.post({
+              text: `A magnitude ${quake.magnitude} earthquake occurred ${quake.location} on ${dateStr} at ${timeStr} GMT\n\nhttps://earthquake.usgs.gov/earthquakes/eventpage/${quake.id}`,
+              embed: {
+                  $type:'app.bsky.embed.images',
+                  images: [{ 
+                    alt: `Shakemap for the magnitude ${quake.magnitude} earthquake mentioned in this post.`,
+                    image: result 
+                  }],
+              }
+            });
+          })
+         
         } 
       });
     } else {
@@ -61,8 +76,15 @@ async function screenshotAndTweet(){
       await uploadFile(`shakemaps/metadata`, JSON.stringify(metadata), 'json');
     }
   }
-
   
 }
 
-screenshotAndTweet();
+// Initialize the agent and login once
+(async () => {
+  try {
+      await login(); // Login once at the start
+      screenshotAndTweet();
+  } catch (error) {
+      console.error("Error during initialization:", error);
+  }
+})();

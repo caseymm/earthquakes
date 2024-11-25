@@ -56,6 +56,7 @@ async function useTheData(id){
   let isBlank = false;
   const page = await context.newPage();
   await page.setViewportSize({ width: 800, height: 800 });
+  console.log(`https://caseymm.github.io/mbx-earthquakes/?url=https://caseymm-earthquakes.s3.us-west-1.amazonaws.com/shakemaps/${id}.geojson`)
   await page.goto(`https://caseymm.github.io/mbx-earthquakes/?url=https://caseymm-earthquakes.s3.us-west-1.amazonaws.com/shakemaps/${id}.geojson`);
   try{
     const sel = await page.waitForSelector('#hidden', {state: 'attached'});
